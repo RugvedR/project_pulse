@@ -1,0 +1,2 @@
+# This directory holds SQLite database files.
+# All .db files are gitignored — this file ensures the directory exists in git.
