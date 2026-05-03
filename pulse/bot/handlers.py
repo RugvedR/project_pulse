@@ -20,6 +20,7 @@ from telegram.ext import ContextTypes
 
 from pulse.db.database import init_db
 from pulse.graph import get_graph
+from pulse.nodes.coach import run_coach
 
 logger = logging.getLogger(__name__)
 
@@ -64,6 +65,41 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
         "Travel, Gifts, Personal, Other"
     )
     await update.message.reply_text(help_text)
+
+
+# ---------------------------------------------------------------------------
+# /briefing Command Handler
+# ---------------------------------------------------------------------------
+async def briefing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /briefing command to generate a proactive financial summary.
+    Usage: /briefing [days] (defaults to 7)
+    """
+    user_id = str(update.effective_user.id)
+    
+    # Parse days argument if provided
+    days = 7
+    if context.args:
+        try:
+            days = int(context.args[0])
+            if days <= 0 or days > 365:
+                raise ValueError()
+        except ValueError:
+            await update.message.reply_text("Please provide a valid number of days (1-365). Example: /briefing 30")
+            return
+            
+    # Show typing indicator
+    await update.message.chat.send_action(action="typing")
+    status_message = await update.message.reply_text(f"📊 Analyzing your spending from the last {days} days...")
+    
+    # Run the Coach Node
+    try:
+        briefing = await run_coach(user_id, days)
+        await status_message.delete()
+        await update.message.reply_text(briefing, parse_mode="Markdown")
+    except Exception as e:
+        logger.error("Error generating briefing: %s", e, exc_info=True)
+        await status_message.edit_text("Sorry, I ran into an issue while generating your briefing.")
 
 
 # ---------------------------------------------------------------------------

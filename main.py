@@ -20,6 +20,7 @@ from pulse.bot.handlers import (
     message_handler,
     start_handler,
     button_callback_handler,
+    briefing_handler,
 )
 from pulse.config import settings
 
@@ -40,6 +41,22 @@ def _setup_logging() -> None:
     logging.getLogger("httpcore").setLevel(logging.WARNING)
     logging.getLogger("telegram").setLevel(logging.WARNING)
     logging.getLogger("google").setLevel(logging.WARNING)
+
+
+# ---------------------------------------------------------------------------
+# Background Jobs
+# ---------------------------------------------------------------------------
+async def weekly_briefing_job(context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Job that runs automatically.
+    In a real multi-user app, this would iterate over all users in the DB
+    who have opted-in. For MVP, we send to a predefined admin list or
+    we just rely on the manual /briefing command until user management is built.
+    """
+    logger.info("Weekly briefing job triggered.")
+    # E.g., fetch users from DB, run coach, context.bot.send_message(...)
+    # We will log it here as a placeholder for the cron-scheduler.
+    pass
 
 
 # ---------------------------------------------------------------------------
@@ -70,8 +87,13 @@ def main() -> None:
     # Register handlers (order matters — commands first, then catch-all)
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("help", help_handler))
+    app.add_handler(CommandHandler("briefing", briefing_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app.add_handler(CallbackQueryHandler(button_callback_handler))
+
+    # Schedule the weekly coach job (runs every 7 days)
+    if app.job_queue:
+        app.job_queue.run_repeating(weekly_briefing_job, interval=7 * 24 * 60 * 60, first=10)
 
     # Register error handler
     app.add_error_handler(error_handler)
