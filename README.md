@@ -25,7 +25,8 @@ Telegram → Scribe (Parse) → Router (Decide) → Vault (Save to DB)
 | Interface       | Telegram Bot API (`python-telegram-bot`) |
 | Validation      | Pydantic v2                         |
 | Database        | SQLAlchemy 2.0 + SQLite (async via `aiosqlite`) |
-| Language        | Python 3.11+                        |
+| Protocol        | Model Context Protocol (FastMCP)     |
+| Environment     | Python 3.11.5                       |
 
 ## Quick Start
 
@@ -52,9 +53,24 @@ python main.py
 ## Development Phases
 
 - **Phase 1** ✅ Foundation — Parse & Save (The Scribe)
-- **Phase 2** 🔬 Agentic Reasoning — Research & Route (The Investigator)
-- **Phase 3** 📊 Proactive Insights — Weekly Briefing (The Coach)
-- **Phase 4** 🌐 Universal Protocol — MCP & Local Models
+- **Phase 2** ✅ Agentic Reasoning — Research & Route (The Investigator)
+- **Phase 3** ✅ Proactive Insights — Weekly Briefing (The Coach)
+- **Phase 4** ✅ Universal Protocol — MCP & LLM Factory
+- **Phase 5** 🚀 Advanced Intelligence — Visualization & Multi-Currency (Roadmap)
+
+## Universal Access (MCP)
+
+Pulse now supports the **Model Context Protocol (MCP)**. This means any MCP-compatible AI agent (like Claude Desktop) can use your Pulse tools.
+
+To run the MCP server:
+```bash
+python -m pulse.mcp_server
+```
+
+To test the server locally:
+```bash
+python test_mcp_locally.py
+```
 
 ## Project Structure
 

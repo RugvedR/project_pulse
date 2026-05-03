@@ -27,7 +27,8 @@ The system operates as a **State Machine**. Each user interaction triggers a gra
 *   **Interface:** Telegram Bot API (via `python-telegram-bot`).
 *   **Schema & Validation:** Pydantic (to ensure strict JSON data structures).
 *   **Database:** SQLAlchemy + SQLite (Local, lightweight, and professional).
-*   **Environment:** Python 3.11+.
+*   **Environment:** Python 3.11.5.
+*   **Universal Protocol:** Model Context Protocol (MCP) using FastMCP.
 
 ---
 
@@ -48,9 +49,18 @@ The system operates as a **State Machine**. Each user interaction triggers a gra
 *   The agent retrieves the last week's data and identifies "Spending Anomalies" or "Budget Alerts."
 *   Send a proactive "Weekly Briefing" to the user via Telegram.
 
-### Phase 4: The Universal Protocol (Future-Proofing)
-*   **MCP Integration:** Refactor Python tools into an MCP Server. This allows any LLM (Claude, Llama 3 via Ollama, etc.) to use your expense tools without a rewrite.
-*   **Local Migration:** Test swapping Gemini for a local model (Ollama) to ensure privacy for sensitive financial data.
+### Phase 4: The Universal Protocol [COMPLETED]
+- **Environment:** Upgrade to Python 3.11 for modern library support.
+- **Model Agnosticism:** Implementation of an LLM Factory supporting both Google Gemini and local Ollama models.
+- **MCP Integration:** Core tools exposed via a Model Context Protocol (MCP) server for external interoperability.
+- **Background Jobs:** Automated weekly briefing scheduler using `apscheduler`.
+- **Refactoring:** All nodes updated to be provider-agnostic and robust to library updates.
+
+### Phase 5: Advanced Intelligence & Visualization [FUTURE]
+- **Multi-Currency Support:** Real-time conversion using exchange rate APIs.
+- **Spending Analytics:** Generate charts and PDF reports for monthly reviews.
+- **Predictive Budgeting:** Forecast next month's spending based on historical data.
+- **Fine-grained Categories:** Sub-category support and automated tax tagging.
 
 ---
 
