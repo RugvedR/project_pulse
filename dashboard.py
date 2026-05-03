@@ -3,6 +3,7 @@ import asyncio
 import pandas as pd
 import plotly.express as px
 from datetime import datetime, timedelta
+from streamlit_autorefresh import st_autorefresh
 
 from pulse.config import settings
 from pulse.analytics import get_spending_by_category, get_daily_spending_trends, get_kpi_metrics
@@ -72,6 +73,10 @@ def run_async(coro):
 # Main Dashboard
 # ---------------------------------------------------------------------------
 if check_password():
+    # Auto-refresh every 2 minutes (120000 milliseconds)
+    # We use a key to ensure it stays consistent
+    st_autorefresh(interval=120000, key="datarefresh")
+
     st.title("🫀 Pulse Financial Analytics")
     st.markdown("---")
 
@@ -79,6 +84,9 @@ if check_password():
     st.sidebar.header("Filters")
     user_id = st.sidebar.text_input("User ID (Thread ID)", value="1485978523")
     lookback_days = st.sidebar.slider("Analysis Period (Days)", 1, 365, 30)
+    
+    if st.sidebar.button("🔄 Refresh Now"):
+        st.rerun()
 
     # Fetch Data
     with st.spinner("Fetching data from Pulse..."):

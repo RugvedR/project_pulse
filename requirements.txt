@@ -41,3 +41,4 @@ psycopg2-binary>=2.9.0
 streamlit>=1.30.0
 plotly>=5.18.0
 pandas>=2.1.0
+streamlit-autorefresh>=0.0.1
