@@ -16,6 +16,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Optional
 
+from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -42,6 +43,9 @@ class Settings(BaseSettings):
         extra="ignore",
     )
 
+    # ── Dashboard Security ────────────────────────────────────────────────
+    DASHBOARD_PASSWORD: str = "pulse_admin_2026"
+
     # ── LLM Provider ──────────────────────────────────────────────────────
     LLM_PROVIDER: str = "google"              # google | ollama
     GEMINI_API_KEY: Optional[str] = None      # Optional if using Ollama
@@ -60,8 +64,20 @@ class Settings(BaseSettings):
     SERPER_API_KEY: Optional[str] = None
 
     # ── Database ──────────────────────────────────────────────────────────
-    DATABASE_URL: str = f"sqlite+aiosqlite:///{_PROJECT_ROOT / 'data' / 'pulse.db'}"
+    DATABASE_URL_RAW: str = Field(default=f"sqlite+aiosqlite:///{_PROJECT_ROOT / 'data' / 'pulse.db'}", alias="DATABASE_URL")
     CHECKPOINT_DB_PATH: str = str(_PROJECT_ROOT / "data" / "checkpoints.db")
+
+    @property
+    def DATABASE_URL(self) -> str:
+        """
+        Returns the database URL. 
+        If it starts with postgresql://, it replaces it with postgresql+psycopg2:// 
+        for SQLAlchemy 2.0 compatibility.
+        """
+        url = self.DATABASE_URL_RAW
+        if url.startswith("postgresql://"):
+            return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        return url
 
     # ── Feature Thresholds ────────────────────────────────────────────────
     LARGE_EXPENSE_THRESHOLD: float = 1000.0   # INR — triggers HITL review

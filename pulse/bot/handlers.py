@@ -103,6 +103,29 @@ async def briefing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 
 
 # ---------------------------------------------------------------------------
+# /dashboard Command Handler
+# ---------------------------------------------------------------------------
+async def dashboard_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Handle the /dashboard command to provide a link to the visual dashboard.
+    """
+    user_id = str(update.effective_user.id)
+    
+    # In a real deployment, you would replace 'localhost' with your public IP or Domain.
+    # For now, we provide the instructions and the secure password.
+    dashboard_msg = (
+        "📊 **Pulse Analytics Dashboard**\n\n"
+        "You can access your visual spending charts here:\n"
+        "🔗 [Open Dashboard](http://localhost:8501)\n\n"
+        "🔑 **Security Details:**\n"
+        f"Your User ID: `{user_id}`\n"
+        f"Password: `{settings.DASHBOARD_PASSWORD}`\n\n"
+        "_Note: Use your User ID in the dashboard sidebar to filter your specific data._"
+    )
+    await update.message.reply_text(dashboard_msg, parse_mode="Markdown")
+
+
+# ---------------------------------------------------------------------------
 # Message Handler — main expense processing pipeline
 # ---------------------------------------------------------------------------
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:

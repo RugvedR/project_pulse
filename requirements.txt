@@ -35,3 +35,9 @@ ddgs>=9.0.0
 # --- Universal Protocol (Phase 4) ---
 mcp>=1.0.0
 langchain-community>=0.2.0
+
+# --- Phase 5: Analytics & Dashboard ---
+psycopg2-binary>=2.9.0
+streamlit>=1.30.0
+plotly>=5.18.0
+pandas>=2.1.0

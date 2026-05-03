@@ -21,6 +21,7 @@ from pulse.bot.handlers import (
     start_handler,
     button_callback_handler,
     briefing_handler,
+    dashboard_handler,
 )
 from pulse.config import settings
 
@@ -113,6 +114,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(CommandHandler("briefing", briefing_handler))
+    app.add_handler(CommandHandler("dashboard", dashboard_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
     app.add_handler(CallbackQueryHandler(button_callback_handler))
 
