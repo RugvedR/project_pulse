@@ -12,13 +12,14 @@ from __future__ import annotations
 import logging
 import sys
 
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
 
 from pulse.bot.handlers import (
     error_handler,
     help_handler,
     message_handler,
     start_handler,
+    button_callback_handler,
 )
 from pulse.config import settings
 
@@ -70,6 +71,7 @@ def main() -> None:
     app.add_handler(CommandHandler("start", start_handler))
     app.add_handler(CommandHandler("help", help_handler))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, message_handler))
+    app.add_handler(CallbackQueryHandler(button_callback_handler))
 
     # Register error handler
     app.add_error_handler(error_handler)

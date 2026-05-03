@@ -15,7 +15,7 @@ from __future__ import annotations
 import logging
 from typing import Any
 
-from telegram import Update
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from pulse.db.database import init_db
@@ -31,11 +31,6 @@ _db_initialized = False
 # /start Command Handler
 # ---------------------------------------------------------------------------
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle the /start command.
-
-    Sends a welcome message explaining what Pulse does and how to use it.
-    """
     welcome = (
         "Welcome to Pulse!\n\n"
         "I'm your AI-powered expense tracker. Just tell me about "
@@ -56,7 +51,6 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 # /help Command Handler
 # ---------------------------------------------------------------------------
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Handle the /help command with usage instructions."""
     help_text = (
         "Pulse Commands:\n\n"
         "/start  - Welcome message\n"
@@ -76,17 +70,6 @@ async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> No
 # Message Handler — main expense processing pipeline
 # ---------------------------------------------------------------------------
 async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """
-    Handle incoming text messages by invoking the LangGraph.
-
-    Flow:
-        1. Extract user message and thread_id
-        2. Ensure DB tables exist (first-run init)
-        3. Prepare initial state for the graph
-        4. Invoke the graph with thread_id config
-        5. Send the response back to Telegram
-    """
-    # Guard against empty messages
     if not update.message or not update.message.text:
         return
 
@@ -95,7 +78,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
 
     logger.info("Message from user %s: %s", user_id, user_message[:100])
 
-    # Lazy DB init on first message
     global _db_initialized
     if not _db_initialized:
         await init_db()
@@ -103,7 +85,6 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         logger.info("Database initialized on first message")
 
     try:
-        # Prepare the initial state
         initial_state: dict[str, Any] = {
             "raw_input": user_message,
             "thread_id": user_id,
@@ -119,32 +100,101 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
             "messages": [],
         }
 
-        # Config for checkpointer persistence
         config = {"configurable": {"thread_id": user_id}}
-
-        # Invoke the graph
         graph = await get_graph()
-        result = await graph.ainvoke(initial_state, config=config)
 
-        # Send the response to the user
-        response_text = result.get("response_to_user", "")
+        # Send a typing action to show it's thinking
+        await update.message.chat.send_action(action="typing")
+        
+        status_message = None
+
+        # Process the graph using streaming
+        async for chunk in graph.astream(initial_state, config=config, stream_mode="updates"):
+            for node_name, node_state in chunk.items():
+                # If Scribe finished and needs research, tell the user!
+                if node_name == "scribe":
+                    parsed = node_state.get("parsed_transaction")
+                    if parsed and getattr(parsed, "needs_research", False):
+                        status_message = await update.message.reply_text(f"🔍 Researching unfamiliar vendor: '{parsed.vendor}'...")
+
+        # After streaming finishes, check if it was paused or completed
+        graph_state = await graph.aget_state(config)
+        
+        if graph_state.next and "hitl_node" in graph_state.next:
+            # We hit the interrupt! Request human approval.
+            parsed = graph_state.values.get("parsed_transaction")
+            
+            keyboard = [
+                [
+                    InlineKeyboardButton("✅ Approve", callback_data="hitl_approve"),
+                    InlineKeyboardButton("❌ Reject", callback_data="hitl_reject"),
+                ]
+            ]
+            reply_markup = InlineKeyboardMarkup(keyboard)
+            
+            msg = (
+                f"⚠️ **Large Expense Alert**\n\n"
+                f"Amount: {parsed.currency} {parsed.amount}\n"
+                f"Vendor: {parsed.vendor}\n"
+                f"Category: {parsed.category}\n\n"
+                f"Do you want to save this transaction?"
+            )
+            
+            if status_message:
+                await status_message.delete()
+                
+            await update.message.reply_text(msg, reply_markup=reply_markup, parse_mode="Markdown")
+            return
+
+        # Not paused, finished completely
+        if status_message:
+            await status_message.delete()
+
+        response_text = graph_state.values.get("response_to_user", "")
         if response_text:
             await update.message.reply_text(response_text)
         else:
-            await update.message.reply_text(
-                "Something went wrong - I didn't generate a response. Please try again."
-            )
+            await update.message.reply_text("Something went wrong - I didn't generate a response. Please try again.")
 
     except Exception as e:
         logger.error("Error processing message: %s", e, exc_info=True)
-        await update.message.reply_text(
-            "Sorry, something went wrong. Please try again in a moment."
-        )
+        await update.message.reply_text("Sorry, something went wrong. Please try again in a moment.")
 
+
+# ---------------------------------------------------------------------------
+# Button Callback Handler (for HITL)
+# ---------------------------------------------------------------------------
+async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """Handle Inline Keyboard button clicks."""
+    query = update.callback_query
+    await query.answer()
+    
+    user_id = str(update.effective_user.id)
+    config = {"configurable": {"thread_id": user_id}}
+    graph = await get_graph()
+    
+    action = query.data
+    
+    if action == "hitl_approve":
+        await query.edit_message_text("✅ Approved! Saving transaction...")
+        
+        # Update the state to indicate approval and resume
+        await graph.aupdate_state(config, {"hitl_approved": True})
+        
+        # Resume the graph
+        async for chunk in graph.astream(None, config=config, stream_mode="updates"):
+            pass
+            
+        graph_state = await graph.aget_state(config)
+        response_text = graph_state.values.get("response_to_user", "Saved successfully.")
+        await query.message.reply_text(response_text)
+        
+    elif action == "hitl_reject":
+        await query.edit_message_text("❌ Transaction rejected. It was not saved.")
+        # We don't resume the graph, just let it die.
 
 # ---------------------------------------------------------------------------
 # Error Handler
 # ---------------------------------------------------------------------------
 async def error_handler(update: object, context: ContextTypes.DEFAULT_TYPE) -> None:
-    """Log errors from the Telegram bot."""
     logger.error("Telegram error: %s", context.error, exc_info=context.error)
