@@ -67,8 +67,3 @@ To ensure a professional coding strategy:
 *   Google AI Studio API Key.
 *   Telegram Bot Token (from @BotFather).
 *   Python Libraries: `langgraph`, `langchain-google-genai`, `sqlalchemy`, `python-telegram-bot`, `pydantic`.
-
----
-
-**Hand-off Note for Building Agent:** 
-*Antigravity Agent, please begin by scaffolding the Phase 1 folder structure. Define the `State` TypedDict and the `Scribe` node first. Ensure the SQLite schema supports amount, category, timestamp, and a 'source_text' field for auditability.*

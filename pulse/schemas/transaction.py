@@ -52,6 +52,10 @@ class TransactionInput(BaseModel):
         default=None,
         description="Optional user-provided note or context.",
     )
+    needs_research: bool = Field(
+        default=False,
+        description="Set to true if the vendor is a specific brand/company that you do not instantly recognize, or if the category is just a guess.",
+    )
 
     model_config = ConfigDict(
         json_schema_extra={

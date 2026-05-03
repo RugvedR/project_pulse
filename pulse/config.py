@@ -43,11 +43,11 @@ class Settings(BaseSettings):
     )
 
     # ── LLM Provider ──────────────────────────────────────────────────────
-    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY: str
     LLM_MODEL_NAME: str = "gemini-2.5-flash"
 
     # ── Telegram Bot ──────────────────────────────────────────────────────
-    TELEGRAM_BOT_TOKEN: str = ""
+    TELEGRAM_BOT_TOKEN: str
 
     # ── Search Provider (Phase 2) ─────────────────────────────────────────
     SEARCH_PROVIDER: str = "tavily"          # tavily | serper | duckduckgo

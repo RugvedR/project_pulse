@@ -27,6 +27,7 @@ from langgraph.graph import END, StateGraph
 
 from pulse.config import settings
 from pulse.nodes.scribe import scribe_node
+from pulse.nodes.investigator import investigator_node
 from pulse.nodes.vault import vault_node
 from pulse.state import AgentState
 
@@ -65,36 +66,70 @@ async def get_checkpointer() -> AsyncSqliteSaver:
 # ---------------------------------------------------------------------------
 # Graph Builder
 # ---------------------------------------------------------------------------
-def _should_save(state: dict) -> str:
-    """
-    Routing function after Scribe.
+def _route_after_scribe(state: dict) -> str:
+    """Route based on Scribe's output."""
+    parsed = state.get("parsed_transaction")
+    if not parsed:
+        logger.info("Routing from Scribe -> END (no parsed transaction)")
+        return END
+        
+    if parsed.needs_research:
+        logger.info(f"Routing from Scribe -> investigator (needs_research=True)")
+        return "investigator"
+        
+    if parsed.amount >= settings.LARGE_EXPENSE_THRESHOLD:
+        logger.info(f"Routing from Scribe -> hitl_node (amount {parsed.amount} >= {settings.LARGE_EXPENSE_THRESHOLD})")
+        return "hitl_node"
+        
+    logger.info(f"Routing from Scribe -> vault (amount {parsed.amount} < {settings.LARGE_EXPENSE_THRESHOLD})")
+    return "vault"
 
-    If the Scribe successfully parsed a transaction, proceed to Vault.
-    Otherwise, go to END (the error message is already in response_to_user).
-    """
-    if state.get("parsed_transaction") is not None:
-        return "vault"
-    return END
+def _route_after_investigator(state: dict) -> str:
+    """Route after research."""
+    parsed = state.get("parsed_transaction")
+    if parsed and parsed.amount >= settings.LARGE_EXPENSE_THRESHOLD:
+        logger.info(f"Routing from Investigator -> hitl_node (amount {parsed.amount} >= {settings.LARGE_EXPENSE_THRESHOLD})")
+        return "hitl_node"
+    logger.info("Routing from Investigator -> vault")
+    return "vault"
 
+async def hitl_node(state: dict) -> dict:
+    """
+    Dummy node for Human-in-the-Loop.
+    We pause the graph *before* this node runs.
+    When resumed, it passes through to Vault.
+    """
+    return {"needs_hitl": True}
 
 def build_graph() -> StateGraph:
-    """
-    Construct the Phase 1 LangGraph.
-
-    Graph structure:
-        START → scribe → (parsed?) → vault → END
-                             ↓
-                            END (parse error)
-    """
+    """Construct the Phase 2 LangGraph."""
     graph = StateGraph(AgentState)
 
     # Add nodes
     graph.add_node("scribe", scribe_node)
+    graph.add_node("investigator", investigator_node)
+    graph.add_node("hitl_node", hitl_node)
     graph.add_node("vault", vault_node)
 
     # Define edges
     graph.set_entry_point("scribe")
-    graph.add_conditional_edges("scribe", _should_save, {"vault": "vault", END: END})
+    
+    # After scribe, conditional route
+    graph.add_conditional_edges(
+        "scribe", 
+        _route_after_scribe, 
+        {"investigator": "investigator", "hitl_node": "hitl_node", "vault": "vault", END: END}
+    )
+    
+    # After investigator, check if large expense
+    graph.add_conditional_edges(
+        "investigator",
+        _route_after_investigator,
+        {"hitl_node": "hitl_node", "vault": "vault"}
+    )
+    
+    # HITL goes to Vault
+    graph.add_edge("hitl_node", "vault")
     graph.add_edge("vault", END)
 
     return graph
@@ -119,6 +154,6 @@ async def get_graph():
     if _compiled_graph is None:
         checkpointer = await get_checkpointer()
         builder = build_graph()
-        _compiled_graph = builder.compile(checkpointer=checkpointer)
-        logger.info("LangGraph compiled with AsyncSqliteSaver checkpointer")
+        _compiled_graph = builder.compile(checkpointer=checkpointer, interrupt_before=["hitl_node"])
+        logger.info("LangGraph compiled with AsyncSqliteSaver and HITL interrupts")
     return _compiled_graph

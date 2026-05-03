@@ -55,7 +55,8 @@ You MUST respond with ONLY a valid JSON object matching this schema:
     "currency": "INR",
     "vendor": "<vendor or merchant name>",
     "category": "<one of: Food, Transport, Entertainment, Shopping, Bills, Health, Education, Sport, Groceries, Subscriptions, Travel, Gifts, Personal, Other>",
-    "notes": "<optional additional context or null>"
+    "notes": "<optional additional context or null>",
+    "needs_research": <boolean>
 }
 
 Rules:
@@ -63,9 +64,10 @@ Rules:
 2. If no currency is mentioned, default to "INR".
 3. Vendor should be the merchant or establishment name. Clean it up (capitalize properly).
 4. Category must be ONE of the listed categories. Choose the best fit.
-5. If the input doesn't describe a financial transaction, respond with:
+5. If the vendor is an unrecognized company/brand, or the category is a guess, set "needs_research": true. Otherwise false.
+6. If the input doesn't describe a financial transaction, respond with:
    {"error": "Not a valid transaction"}
-6. Do NOT include any text outside the JSON object. No markdown, no explanation.
+7. Do NOT include any text outside the JSON object. No markdown, no explanation.
 """
 
 
