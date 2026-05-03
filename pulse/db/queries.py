@@ -34,3 +34,15 @@ async def get_recent_transactions(thread_id: str, days: int = 7) -> List[Transac
         result = await session.execute(query)
         # result.scalars().all() returns a list of Transaction ORM objects
         return list(result.scalars().all())
+
+async def get_all_user_ids() -> List[str]:
+    """
+    Retrieve all unique thread_ids (user IDs) from the database.
+    Used for background broadcast jobs like weekly briefings.
+    """
+    async with get_session() as session:
+        # Use select(Transaction.thread_id).distinct()
+        from sqlalchemy import distinct
+        query = select(distinct(Transaction.thread_id))
+        result = await session.execute(query)
+        return [str(row[0]) for row in result.all()]

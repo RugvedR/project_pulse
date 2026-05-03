@@ -17,31 +17,12 @@ import logging
 from typing import Any, Dict
 
 from langchain_core.messages import HumanMessage, SystemMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from pulse.config import settings
+from pulse.llm import get_llm, extract_text
 from pulse.schemas.transaction import TransactionInput
 
 logger = logging.getLogger(__name__)
-
-# ---------------------------------------------------------------------------
-# LLM Instance — lazy initialization (avoids API key errors at import time)
-# ---------------------------------------------------------------------------
-_llm = None
-
-
-def _get_llm() -> ChatGoogleGenerativeAI:
-    """Get or create the LLM instance. Lazy-loaded on first call."""
-    global _llm
-    if _llm is None:
-        _llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_MODEL_NAME,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=0.0,  # Deterministic for parsing
-            convert_system_message_to_human=True,
-            max_retries=1,    # Fail fast on rate limits instead of hammering the API
-        )
-    return _llm
 
 # ---------------------------------------------------------------------------
 # System Prompt — instructs the LLM to extract structured expense data
@@ -102,8 +83,8 @@ async def scribe_node(state: Dict[str, Any]) -> Dict[str, Any]:
         ]
 
         # Call the LLM
-        response = await _get_llm().ainvoke(messages)
-        response_text = response.content.strip()
+        response = await get_llm(temperature=0.0).ainvoke(messages)
+        response_text = extract_text(response).strip()
 
         logger.debug("LLM raw response: %s", response_text)
 

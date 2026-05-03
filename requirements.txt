@@ -12,7 +12,7 @@ langchain-google-genai>=2.0.0
 langchain-core>=0.3.0
 
 # --- Telegram Interface ---
-python-telegram-bot>=21.0
+python-telegram-bot[job-queue]>=21.0
 
 # --- Database ---
 sqlalchemy>=2.0.0
@@ -31,3 +31,7 @@ pytest-asyncio>=0.23.0
 
 # --- Search Providers ---
 ddgs>=9.0.0
+
+# --- Universal Protocol (Phase 4) ---
+mcp>=1.0.0
+langchain-community>=0.2.0

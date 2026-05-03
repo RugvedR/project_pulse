@@ -10,26 +10,13 @@ import logging
 from typing import Any, Dict
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from pulse.config import settings
+from pulse.llm import get_llm, extract_text
 from pulse.tools.search import get_search_provider, SearchQueryInput
 
 logger = logging.getLogger(__name__)
 
-# LLM singleton for Investigator
-_llm = None
-
-def _get_llm() -> ChatGoogleGenerativeAI:
-    global _llm
-    if _llm is None:
-        _llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_MODEL_NAME,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=0.0,
-            max_retries=1,
-        )
-    return _llm
 
 
 _INVESTIGATOR_SYSTEM_PROMPT = """You are a financial investigator.
@@ -77,8 +64,8 @@ async def investigator_node(state: Dict[str, Any]) -> Dict[str, Any]:
             HumanMessage(content=human_msg)
         ]
         
-        llm_response = await _get_llm().ainvoke(messages)
-        new_category = llm_response.content.strip()
+        llm_response = await get_llm(temperature=0.0).ainvoke(messages)
+        new_category = extract_text(llm_response).strip()
 
         # Simple validation
         valid_categories = {"Food", "Transport", "Entertainment", "Shopping", "Bills", "Health", "Education", "Sport", "Groceries", "Subscriptions", "Travel", "Gifts", "Personal", "Other"}
