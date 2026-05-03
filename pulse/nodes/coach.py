@@ -10,26 +10,13 @@ import logging
 from typing import Optional
 
 from langchain_core.messages import SystemMessage, HumanMessage
-from langchain_google_genai import ChatGoogleGenerativeAI
 
 from pulse.config import settings
+from pulse.llm import get_llm, extract_text
 from pulse.db.queries import get_recent_transactions
 
 logger = logging.getLogger(__name__)
 
-# LLM singleton for Coach
-_llm = None
-
-def _get_llm() -> ChatGoogleGenerativeAI:
-    global _llm
-    if _llm is None:
-        _llm = ChatGoogleGenerativeAI(
-            model=settings.LLM_MODEL_NAME,
-            google_api_key=settings.GEMINI_API_KEY,
-            temperature=0.4, # slightly higher temp for more conversational insights
-            max_retries=1,
-        )
-    return _llm
 
 
 _COACH_SYSTEM_PROMPT = """You are Pulse, an elite AI financial coach. Your job is to review a user's recent spending and provide a highly readable, proactive briefing.
@@ -81,8 +68,8 @@ async def run_coach(thread_id: str, days: int = 7) -> str:
             HumanMessage(content=data_context)
         ]
         
-        response = await _get_llm().ainvoke(messages)
-        return response.content.strip()
+        response = await get_llm(temperature=0.4).ainvoke(messages)
+        return extract_text(response).strip()
     except Exception as e:
         logger.error("Coach node error: %s", e, exc_info=True)
         return "I'm having trouble analyzing your data right now. Please try again later."

@@ -12,7 +12,7 @@ from __future__ import annotations
 import logging
 import sys
 
-from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters
+from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
 
 from pulse.bot.handlers import (
     error_handler,
@@ -23,6 +23,8 @@ from pulse.bot.handlers import (
     briefing_handler,
 )
 from pulse.config import settings
+
+logger = logging.getLogger(__name__)
 
 
 # ---------------------------------------------------------------------------
@@ -48,15 +50,39 @@ def _setup_logging() -> None:
 # ---------------------------------------------------------------------------
 async def weekly_briefing_job(context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Job that runs automatically.
-    In a real multi-user app, this would iterate over all users in the DB
-    who have opted-in. For MVP, we send to a predefined admin list or
-    we just rely on the manual /briefing command until user management is built.
+    Job that runs automatically every 7 days.
+    Iterates over all users in the database and sends them a personalized 
+    spending briefing using the Coach node.
     """
     logger.info("Weekly briefing job triggered.")
-    # E.g., fetch users from DB, run coach, context.bot.send_message(...)
-    # We will log it here as a placeholder for the cron-scheduler.
-    pass
+    from pulse.db.queries import get_all_user_ids
+    from pulse.nodes.coach import run_coach
+    
+    try:
+        user_ids = await get_all_user_ids()
+        if not user_ids:
+            logger.info("No users found in database for briefings.")
+            return
+
+        logger.info("Sending weekly briefings to %d users.", len(user_ids))
+        
+        for user_id in user_ids:
+            try:
+                # Run the coach pipeline for this user
+                briefing = await run_coach(user_id, days=7)
+                
+                # Send the briefing to the user's Telegram chat
+                await context.bot.send_message(
+                    chat_id=int(user_id), 
+                    text=briefing, 
+                    parse_mode="Markdown"
+                )
+                logger.info("Briefing sent successfully to user %s", user_id)
+            except Exception as e:
+                logger.error("Failed to send briefing to user %s: %s", user_id, e)
+                
+    except Exception as e:
+        logger.error("Error in weekly_briefing_job: %s", e)
 
 
 # ---------------------------------------------------------------------------
@@ -65,7 +91,6 @@ async def weekly_briefing_job(context: ContextTypes.DEFAULT_TYPE) -> None:
 def main() -> None:
     """Build and run the Telegram bot application."""
     _setup_logging()
-    logger = logging.getLogger(__name__)
 
     # Validate required config
     if not settings.TELEGRAM_BOT_TOKEN:

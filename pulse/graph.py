@@ -30,6 +30,7 @@ from pulse.nodes.scribe import scribe_node
 from pulse.nodes.investigator import investigator_node
 from pulse.nodes.vault import vault_node
 from pulse.state import AgentState
+import pulse.schemas.transaction # Register for checkpoint serialization
 
 logger = logging.getLogger(__name__)
 

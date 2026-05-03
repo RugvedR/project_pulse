@@ -43,8 +43,13 @@ class Settings(BaseSettings):
     )
 
     # ── LLM Provider ──────────────────────────────────────────────────────
-    GEMINI_API_KEY: str
+    LLM_PROVIDER: str = "google"              # google | ollama
+    GEMINI_API_KEY: Optional[str] = None      # Optional if using Ollama
     LLM_MODEL_NAME: str = "gemini-2.5-flash"
+    OLLAMA_BASE_URL: str = "http://localhost:11434"
+
+    # ── Universal Protocol (Phase 4) ──────────────────────────────────────
+    MCP_SERVER_PORT: int = 8000
 
     # ── Telegram Bot ──────────────────────────────────────────────────────
     TELEGRAM_BOT_TOKEN: str
