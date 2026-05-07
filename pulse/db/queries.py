@@ -10,7 +10,7 @@ from sqlalchemy import select
 from pulse.db.database import get_session
 from pulse.db.models import Transaction
 
-async def get_recent_transactions(thread_id: str, days: int = 7) -> List[Transaction]:
+async def get_recent_transactions(thread_id: str, days: int = 7, limit: int = None) -> List[Transaction]:
     """
     Fetch all transactions for a specific user from the last `days` days.
     
@@ -28,8 +28,11 @@ async def get_recent_transactions(thread_id: str, days: int = 7) -> List[Transac
             select(Transaction)
             .where(Transaction.thread_id == thread_id)
             .where(Transaction.timestamp >= cutoff_date)
-            .order_by(Transaction.timestamp.asc())
+            .order_by(Transaction.timestamp.desc())
         )
+        
+        if limit:
+            query = query.limit(limit)
         
         result = await session.execute(query)
         # result.scalars().all() returns a list of Transaction ORM objects

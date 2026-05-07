@@ -56,11 +56,12 @@ The system operates as a **State Machine**. Each user interaction triggers a gra
 - **Background Jobs:** Automated weekly briefing scheduler using `apscheduler`.
 - **Refactoring:** All nodes updated to be provider-agnostic and robust to library updates.
 
-### Phase 5: Advanced Intelligence & Visualization [FUTURE]
-- **Multi-Currency Support:** Real-time conversion using exchange rate APIs.
-- **Spending Analytics:** Generate charts and PDF reports for monthly reviews.
-- **Predictive Budgeting:** Forecast next month's spending based on historical data.
-- **Fine-grained Categories:** Sub-category support and automated tax tagging.
+### Phase 5: Advanced Intelligence & Visualization [IN PLANNING]
+- **Cloud Database Migration:** Migrate from SQLite to Supabase (PostgreSQL) for cloud synchronization and multi-client access.
+- **Analytics Module:** Develop a specialized engine to compute spending trends, category breakdowns, and budget anomalies.
+- **Visual Dashboard:** Build a secure Streamlit dashboard featuring interactive Plotly charts (Donut for categories, Area for trends).
+- **Authentication:** Implement a password-protected access layer for the dashboard.
+- **Telegram Integration:** Add a `/dashboard` command to generate secure access links for the user.
 
 ---
 
