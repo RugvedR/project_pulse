@@ -96,11 +96,14 @@ def get_sync_engine():
     # Ensure we use the synchronous psycopg2 driver
     if raw_url.startswith("postgresql://"):
         sync_url = raw_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    elif raw_url.startswith("postgres://"):
+        sync_url = raw_url.replace("postgres://", "postgresql+psycopg2://", 1)
     elif raw_url.startswith("sqlite"):
         sync_url = raw_url.replace("sqlite+aiosqlite", "sqlite")
     else:
         sync_url = raw_url
-    return create_engine(sync_url, pool_pre_ping=True)
+    from sqlalchemy.pool import NullPool
+    return create_engine(sync_url, pool_pre_ping=True, poolclass=NullPool)
 
 
 def get_db_session():
