@@ -68,27 +68,84 @@ def get_db_session():
     return Session()
 
 # ---------------------------------------------------------------------------
-# Authentication
+# OTP Authentication (Phase 6 — per-user, no shared password)
 # ---------------------------------------------------------------------------
-def check_password():
-    """Returns True if the user has entered the correct password."""
-    def password_entered():
-        if st.session_state["password"] == settings.DASHBOARD_PASSWORD:
-            st.session_state["password_correct"] = True
-            del st.session_state["password"]
-        else:
-            st.session_state["password_correct"] = False
+def verify_otp(thread_id: str, token: str) -> bool:
+    """
+    Check the submitted OTP against the database.
+    Uses the same synchronous engine so no async complications.
+    """
+    with get_db_session() as session:
+        row = session.execute(
+            text(
+                "SELECT auth_token, token_expires_at FROM user_profiles "
+                "WHERE thread_id = :tid"
+            ),
+            {"tid": thread_id},
+        ).fetchone()
 
-    if "password_correct" not in st.session_state:
-        st.text_input("Enter Dashboard Password", type="password",
-                      on_change=password_entered, key="password")
-        return False
-    elif not st.session_state["password_correct"]:
-        st.text_input("Enter Dashboard Password", type="password",
-                      on_change=password_entered, key="password")
-        st.error("😕 Password incorrect")
-        return False
-    return True
+        if not row or not row[0] or not row[1]:
+            return False
+
+        stored_token = row[0]
+        expires_at = row[1]
+
+        # Normalise timezone
+        now = datetime.utcnow()
+        if hasattr(expires_at, "tzinfo") and expires_at.tzinfo is not None:
+            import pytz
+            now = datetime.now(pytz.utc)
+
+        if stored_token != token or expires_at < now:
+            return False
+
+        # Single-use: clear the token immediately
+        session.execute(
+            text(
+                "UPDATE user_profiles "
+                "SET auth_token = NULL, token_expires_at = NULL "
+                "WHERE thread_id = :tid"
+            ),
+            {"tid": thread_id},
+        )
+        session.commit()
+        return True
+
+
+def check_login() -> bool:
+    """
+    Renders the OTP login form and returns True once a user is authenticated.
+    The authenticated user_id is stored in st.session_state for the session.
+    """
+    if st.session_state.get("authenticated"):
+        return True
+
+    st.title("🫀 Pulse Analytics")
+    st.markdown("### Secure Login")
+    st.info(
+        "Get your access code by sending `/dashboard` to your Pulse bot on Telegram.",
+        icon="💬",
+    )
+
+    with st.form("login_form"):
+        user_id_input = st.text_input("Your Telegram User ID", placeholder="e.g. 1485978523")
+        token_input = st.text_input("6-Digit Access Code", placeholder="e.g. 482910", max_chars=6)
+        submitted = st.form_submit_button("Login →")
+
+    if submitted:
+        if not user_id_input or not token_input:
+            st.error("Please fill in both fields.")
+            return False
+
+        if verify_otp(user_id_input.strip(), token_input.strip()):
+            st.session_state["authenticated"] = True
+            st.session_state["user_id"] = user_id_input.strip()
+            st.rerun()
+        else:
+            st.error("❌ Invalid code or code has expired. Get a new one from the bot.")
+            return False
+
+    return False
 
 # ---------------------------------------------------------------------------
 # Data Fetchers — fully synchronous, cached per (user_id, days)
@@ -166,17 +223,24 @@ def fetch_recent_transactions(user_id: str, days: int) -> list:
 # ---------------------------------------------------------------------------
 # Main Dashboard
 # ---------------------------------------------------------------------------
-if check_password():
+if check_login():
+    # User ID is now locked to the authenticated session
+    user_id = st.session_state["user_id"]
+
     st.title("🫀 Pulse Financial Analytics")
     st.markdown("---")
 
     # Sidebar
     st.sidebar.header("Filters")
-    user_id = st.sidebar.text_input("User ID (Thread ID)", value="1485978523")
+    st.sidebar.text(f"🔑 Logged in as: {user_id}")
     lookback_days = st.sidebar.slider("Analysis Period (Days)", 1, 365, 30)
 
     if st.sidebar.button("🔄 Refresh Now"):
         st.cache_data.clear()
+        st.rerun()
+
+    if st.sidebar.button("🚪 Logout"):
+        st.session_state.clear()
         st.rerun()
 
     # Fetch Data

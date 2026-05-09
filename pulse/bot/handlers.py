@@ -19,8 +19,15 @@ from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import ContextTypes
 
 from pulse.db.database import init_db
+from pulse.db.queries import (
+    get_or_create_profile, 
+    get_profile_by_id,
+    update_profile_settings, 
+    generate_dashboard_token
+)
 from pulse.graph import get_graph
 from pulse.nodes.coach import run_coach
+from pulse.config import settings
 
 logger = logging.getLogger(__name__)
 
@@ -32,20 +39,44 @@ _db_initialized = False
 # /start Command Handler
 # ---------------------------------------------------------------------------
 async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
-    welcome = (
-        "Welcome to Pulse!\n\n"
-        "I'm your AI-powered expense tracker. Just tell me about "
-        "your expenses in natural language, and I'll handle the rest.\n\n"
-        "Examples:\n"
-        "  - Spent 450 at the badminton court\n"
-        "  - Paid 120 for auto rickshaw\n"
-        "  - Coffee at Starbucks for 350\n"
-        "  - 2000 groceries at DMart\n\n"
-        "I'll parse the amount, vendor, and category, "
-        "then save it to your expense tracker.\n\n"
-        "Type /help for more commands."
+    """
+    Handle /start: register or update the user's profile, then welcome them.
+    """
+    user = update.effective_user
+    user_id = str(user.id)
+
+    # Ensure DB is initialized
+    global _db_initialized
+    if not _db_initialized:
+        await init_db()
+        _db_initialized = True
+
+    # Upsert the user profile
+    profile = await get_or_create_profile(
+        thread_id=user_id,
+        username=user.username,
+        full_name=user.full_name,
     )
-    await update.message.reply_text(welcome)
+
+    is_new = profile.joined_at is not None
+    if is_new:
+        welcome = (
+            f"👋 Welcome to *Pulse*, {user.first_name}!\n\n"
+            "I'm your AI-powered expense tracker. Just tell me about "
+            "your expenses in plain language and I'll handle the rest.\n\n"
+            "*Examples:*\n"
+            "  • _Spent 450 at the badminton court_\n"
+            "  • _Paid 120 for auto rickshaw_\n"
+            "  • _Coffee at Starbucks for 350_\n"
+            "  • _2000 groceries at DMart_\n\n"
+            "I'll parse the amount, vendor, and category — then save it.\n\n"
+            "Use /settings to configure your preferences.\n"
+            "Use /help for the full command list."
+        )
+    else:
+        welcome = f"👋 Welcome back, {user.first_name}! Ready to track your expenses."
+
+    await update.message.reply_text(welcome, parse_mode="Markdown")
 
 
 # ---------------------------------------------------------------------------
@@ -53,18 +84,21 @@ async def start_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> N
 # ---------------------------------------------------------------------------
 async def help_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     help_text = (
-        "Pulse Commands:\n\n"
-        "/start  - Welcome message\n"
-        "/help   - Show this help\n\n"
-        "Usage:\n"
-        "Just send me a message describing your expense. "
-        "I'll extract the details and save them.\n\n"
-        "Supported categories:\n"
+        "*Pulse Commands*\n\n"
+        "/start       — Welcome & registration\n"
+        "/help        — Show this help\n"
+        "/briefing    — Generate an on-demand spending report\n"
+        "/settings    — Configure your preferences\n"
+        "/dashboard   — Get a secure login code for the web dashboard\n\n"
+        "*Tracking Expenses:*\n"
+        "Just send a message describing your expense. I'll extract "
+        "the details and save them automatically.\n\n"
+        "*Supported Categories:*\n"
         "Food, Transport, Entertainment, Shopping, Bills, "
         "Health, Education, Sport, Groceries, Subscriptions, "
         "Travel, Gifts, Personal, Other"
     )
-    await update.message.reply_text(help_text)
+    await update.message.reply_text(help_text, parse_mode="Markdown")
 
 
 # ---------------------------------------------------------------------------
@@ -111,22 +145,113 @@ async def briefing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
 # ---------------------------------------------------------------------------
 async def dashboard_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Handle the /dashboard command to provide a link to the visual dashboard.
+    Handle /dashboard: generate a short-lived OTP and send it to the user.
+    The OTP is used to authenticate on the Streamlit dashboard without a password.
     """
     user_id = str(update.effective_user.id)
-    
-    # In a real deployment, you would replace 'localhost' with your public IP or Domain.
-    # For now, we provide the instructions and the secure password.
-    dashboard_msg = (
-        "📊 **Pulse Analytics Dashboard**\n\n"
-        "You can access your visual spending charts here:\n"
-        "🔗 [Open Dashboard](http://localhost:8501)\n\n"
-        "🔑 **Security Details:**\n"
-        f"Your User ID: `{user_id}`\n"
-        f"Password: `{settings.DASHBOARD_PASSWORD}`\n\n"
-        "_Note: Use your User ID in the dashboard sidebar to filter your specific data._"
+
+    token = await generate_dashboard_token(user_id)
+    if not token:
+        await update.message.reply_text(
+            "⚠️ You need to register first. Please send /start."
+        )
+        return
+
+    msg = (
+        "📊 *Pulse Analytics Dashboard*\n\n"
+        "Open the dashboard and log in with:\n"
+        f"🆔 *Your ID:* `{user_id}`\n"
+        f"🔑 *Access Code:* `{token}`\n\n"
+        "⏳ _This code expires in 10 minutes and can only be used once._\n\n"
+        "🔗 [Open Dashboard](http://localhost:8501)"
     )
-    await update.message.reply_text(dashboard_msg, parse_mode="Markdown")
+    await update.message.reply_text(msg, parse_mode="Markdown")
+
+
+# ---------------------------------------------------------------------------
+# /settings Command Handler
+# ---------------------------------------------------------------------------
+async def settings_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
+    """
+    Show an interactive settings menu via Inline Keyboard.
+    """
+    user_id = str(update.effective_user.id)
+
+    # Fetch the current profile to show live state
+    profile = await get_or_create_profile(
+        thread_id=user_id,
+        username=update.effective_user.username,
+        full_name=update.effective_user.full_name,
+    )
+
+    briefing_status = "✅ On" if profile.wants_briefings else "❌ Off"
+    interval_label = f"{profile.briefing_interval} days"
+    currency_label = profile.currency
+
+    keyboard = [
+        [
+            InlineKeyboardButton(
+                f"📬 Briefings: {briefing_status}",
+                callback_data="settings_toggle_briefings"
+            )
+        ],
+        [
+            InlineKeyboardButton("⏱ Every 3 days", callback_data="settings_interval_3"),
+            InlineKeyboardButton("⏱ Every 7 days", callback_data="settings_interval_7"),
+            InlineKeyboardButton("⏱ Every 14 days", callback_data="settings_interval_14"),
+        ],
+        [
+            InlineKeyboardButton("💰 Currency: INR", callback_data="settings_currency_INR"),
+            InlineKeyboardButton("💰 Currency: USD", callback_data="settings_currency_USD"),
+            InlineKeyboardButton("💰 Currency: EUR", callback_data="settings_currency_EUR"),
+        ],
+    ]
+    reply_markup = InlineKeyboardMarkup(keyboard)
+
+    settings_text = (
+        "⚙️ *Pulse Settings*\n\n"
+        f"📬 Briefings: {briefing_status}\n"
+        f"⏱ Frequency: {interval_label}\n"
+        f"💰 Currency: {currency_label}\n\n"
+        "Tap a button below to change a setting:"
+    )
+    await update.message.reply_text(
+        settings_text, reply_markup=reply_markup, parse_mode="Markdown"
+    )
+
+
+async def settings_callback_handler(
+    update: Update, context: ContextTypes.DEFAULT_TYPE
+) -> None:
+    """
+    Process button presses from the /settings inline keyboard.
+    """
+    query = update.callback_query
+    await query.answer()
+
+    user_id = str(update.effective_user.id)
+    action = query.data
+
+    if action == "settings_toggle_briefings":
+        profile = await get_profile_by_id(thread_id=user_id)
+        if not profile:
+            await query.edit_message_text("⚠️ Profile not found. Please send /start first.")
+            return
+            
+        new_state = not profile.wants_briefings
+        await update_profile_settings(thread_id=user_id, wants_briefings=new_state)
+        state_label = "✅ enabled" if new_state else "❌ disabled"
+        await query.edit_message_text(f"📬 Weekly briefings are now *{state_label}*.", parse_mode="Markdown")
+
+    elif action.startswith("settings_interval_"):
+        days = int(action.split("_")[-1])
+        await update_profile_settings(thread_id=user_id, briefing_interval=days)
+        await query.edit_message_text(f"⏱ Briefing frequency set to every *{days} days*.", parse_mode="Markdown")
+
+    elif action.startswith("settings_currency_"):
+        currency = action.split("_")[-1]
+        await update_profile_settings(thread_id=user_id, currency=currency)
+        await query.edit_message_text(f"💰 Currency updated to *{currency}*.", parse_mode="Markdown")
 
 
 # ---------------------------------------------------------------------------
