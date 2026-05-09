@@ -1,0 +1,23 @@
+# Exclude the virtual environment (huge and built for Windows)
+venv/
+.venv/
+
+# Exclude secrets (never bake these into an image!)
+.env
+
+# Exclude local database files (we use Supabase)
+data/*.db
+data/*.sqlite
+
+# Exclude Python cache and logs
+__pycache__/
+*.pyc
+*.log
+
+# Exclude Git files
+.git/
+.gitignore
+
+# Exclude IDE settings
+.vscode/
+.idea/
