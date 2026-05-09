@@ -56,12 +56,19 @@ The system operates as a **State Machine**. Each user interaction triggers a gra
 - **Background Jobs:** Automated weekly briefing scheduler using `apscheduler`.
 - **Refactoring:** All nodes updated to be provider-agnostic and robust to library updates.
 
-### Phase 5: Advanced Intelligence & Visualization [IN PLANNING]
-- **Cloud Database Migration:** Migrate from SQLite to Supabase (PostgreSQL) for cloud synchronization and multi-client access.
-- **Analytics Module:** Develop a specialized engine to compute spending trends, category breakdowns, and budget anomalies.
-- **Visual Dashboard:** Build a secure Streamlit dashboard featuring interactive Plotly charts (Donut for categories, Area for trends).
-- **Authentication:** Implement a password-protected access layer for the dashboard.
-- **Telegram Integration:** Add a `/dashboard` command to generate secure access links for the user.
+### Phase 5: Cloud Migration & Visualization [COMPLETED]
+- **Cloud Migration:** Transitioned from local SQLite to Supabase (PostgreSQL) using the `asyncpg` driver for high-performance cloud connectivity.
+- **Analytics Engine:** Developed a specialized module for real-time spending trends, category breakdowns, and monthly KPI tracking.
+- **Visual Dashboard:** Built a premium Streamlit dashboard with Plotly visualizations (Categorical Donut and Daily Area charts).
+- **Performance Optimization:** Implemented sequential data fetching and process-level caching to resolve `asyncpg` concurrency conflicts.
+- **Security Hardening:** Externalized all secrets (including Dashboard Password) to environment variables.
+
+### Phase 6: Multi-Tenant Hardening & Professional Deployment [IN PLANNING]
+- **User Profile System:** Database-level multi-tenancy with a `profiles` table to manage individual user settings (currency, timezones, opt-ins).
+- **Onboarding Flow:** Formal `/start` registration and a `/settings` interactive menu for per-user configuration.
+- **Smart Briefing Engine:** Decoupled scheduler that respects user-defined intervals and "Opt-in" status, replacing the global bot-level timer.
+- **Secure Dashboard Access:** Transitioning from a shared password to per-user authentication (Magic Links or Auth Tokens via Telegram).
+- **Cloud Deployment:** Orchestrated deployment of the Bot (Backend) and Streamlit (Frontend) as unified cloud services.
 
 ---
 

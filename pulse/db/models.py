@@ -7,8 +7,9 @@ All models use:
     - UTC timestamps for consistency.
 
 Tables:
-    - Transaction: Individual expense/income records.
-    - Budget: Monthly budget limits per category (Phase 3).
+    - UserProfile: Registered users, preferences, and auth tokens (Phase 6).
+    - Transaction:  Individual expense/income records.
+    - Budget:       Monthly budget limits per category.
 """
 
 from __future__ import annotations
@@ -28,6 +29,57 @@ from pulse.db.database import Base
 def _utcnow() -> datetime:
     """Return timezone-aware UTC now."""
     return datetime.now(timezone.utc)
+
+
+# ---------------------------------------------------------------------------
+# UserProfile Model (Phase 6 — Multi-Tenant Identity & Preferences)
+# ---------------------------------------------------------------------------
+class UserProfile(Base):
+    """
+    A registered Pulse user.
+
+    Created automatically when a user sends /start for the first time.
+    Stores personal preferences, scheduling state, and a short-lived
+    OTP token used to authenticate dashboard sessions.
+
+    Attributes:
+        thread_id:          Telegram user ID — the primary identity key.
+        username:           Telegram @handle (updated on each /start).
+        full_name:          Display name from Telegram.
+        currency:           Preferred currency code (e.g., "INR", "USD").
+        wants_briefings:    Whether the user has opted in to scheduled reports.
+        briefing_interval:  Days between each briefing (3, 7, or 14).
+        last_briefing_at:   UTC timestamp of the last successful briefing sent.
+        auth_token:         6-digit OTP for dashboard login (plain, short-lived).
+        token_expires_at:   UTC expiry time for the current auth_token.
+        joined_at:          UTC timestamp of first /start registration.
+    """
+
+    __tablename__ = "user_profiles"
+
+    thread_id: Mapped[str] = mapped_column(String(64), primary_key=True)
+    username: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    full_name: Mapped[Optional[str]] = mapped_column(String(128), nullable=True)
+    currency: Mapped[str] = mapped_column(String(8), nullable=False, default="INR")
+    wants_briefings: Mapped[bool] = mapped_column(Boolean, nullable=False, default=True)
+    briefing_interval: Mapped[int] = mapped_column(Integer, nullable=False, default=7)
+    last_briefing_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    auth_token: Mapped[Optional[str]] = mapped_column(String(6), nullable=True, default=None)
+    token_expires_at: Mapped[Optional[datetime]] = mapped_column(
+        DateTime(timezone=True), nullable=True, default=None
+    )
+    joined_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True), nullable=False, default=_utcnow
+    )
+
+    def __repr__(self) -> str:
+        return (
+            f"<UserProfile(thread_id={self.thread_id!r}, "
+            f"username={self.username!r}, currency={self.currency!r}, "
+            f"wants_briefings={self.wants_briefings})>"
+        )
 
 
 # ---------------------------------------------------------------------------
