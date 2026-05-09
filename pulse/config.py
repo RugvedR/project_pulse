@@ -44,7 +44,7 @@ class Settings(BaseSettings):
     )
 
     # ── Dashboard Security ────────────────────────────────────────────────
-    DASHBOARD_PASSWORD: str = "pulse_admin_2026"
+    DASHBOARD_PASSWORD: str
 
     # ── LLM Provider ──────────────────────────────────────────────────────
     LLM_PROVIDER: str = "google"              # google | ollama
@@ -76,7 +76,7 @@ class Settings(BaseSettings):
         """
         url = self.DATABASE_URL_RAW
         if url.startswith("postgresql://"):
-            return url.replace("postgresql://", "postgresql+psycopg2://", 1)
+            return url.replace("postgresql://", "postgresql+asyncpg://", 1)
         return url
 
     # ── Feature Thresholds ────────────────────────────────────────────────

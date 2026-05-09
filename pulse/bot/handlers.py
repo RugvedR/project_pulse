@@ -95,8 +95,12 @@ async def briefing_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) -
     # Run the Coach Node
     try:
         briefing = await run_coach(user_id, days)
-        await status_message.delete()
-        await update.message.reply_text(briefing, parse_mode="Markdown")
+        try:
+            await status_message.delete()
+            await update.message.reply_text(briefing, parse_mode="Markdown")
+        except Exception as parse_err:
+            logger.warning("Markdown parsing failed, falling back to plain text: %s", parse_err)
+            await update.message.reply_text(briefing)
     except Exception as e:
         logger.error("Error generating briefing: %s", e, exc_info=True)
         await status_message.edit_text("Sorry, I ran into an issue while generating your briefing.")
@@ -162,19 +166,27 @@ async def message_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) ->
         config = {"configurable": {"thread_id": user_id}}
         graph = await get_graph()
 
-        # Send a typing action to show it's thinking
+        # Send a typing action and an initial status message
         await update.message.chat.send_action(action="typing")
-        
-        status_message = None
+        status_message = await update.message.reply_text("✨ Pulse is processing...")
 
         # Process the graph using streaming
         async for chunk in graph.astream(initial_state, config=config, stream_mode="updates"):
             for node_name, node_state in chunk.items():
-                # If Scribe finished and needs research, tell the user!
+                # Update status based on node transitions
                 if node_name == "scribe":
                     parsed = node_state.get("parsed_transaction")
                     if parsed and getattr(parsed, "needs_research", False):
-                        status_message = await update.message.reply_text(f"🔍 Researching unfamiliar vendor: '{parsed.vendor}'...")
+                        await status_message.edit_text(f"🔍 Researching unfamiliar vendor: '{parsed.vendor}'...")
+                    else:
+                        await status_message.edit_text("✅ Expense parsed. Checking rules...")
+                
+                elif node_name == "investigator":
+                    await status_message.edit_text("🕵️ Investigation complete. Finalizing categorization...")
+                
+                elif node_name == "vault":
+                    # We will delete the status message before the final success message
+                    pass
 
         # After streaming finishes, check if it was paused or completed
         graph_state = await graph.aget_state(config)
@@ -245,8 +257,8 @@ async def button_callback_handler(update: Update, context: ContextTypes.DEFAULT_
             pass
             
         graph_state = await graph.aget_state(config)
-        response_text = graph_state.values.get("response_to_user", "Saved successfully.")
-        await query.message.reply_text(response_text)
+        response = graph_state.values.get("response_to_user", "✅ Transaction saved!")
+        await query.message.reply_text(response)
         
     elif action == "hitl_reject":
         await query.edit_message_text("❌ Transaction rejected. It was not saved.")

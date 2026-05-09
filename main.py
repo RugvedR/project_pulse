@@ -73,11 +73,18 @@ async def weekly_briefing_job(context: ContextTypes.DEFAULT_TYPE) -> None:
                 briefing = await run_coach(user_id, days=7)
                 
                 # Send the briefing to the user's Telegram chat
-                await context.bot.send_message(
-                    chat_id=int(user_id), 
-                    text=briefing, 
-                    parse_mode="Markdown"
-                )
+                try:
+                    await context.bot.send_message(
+                        chat_id=int(user_id), 
+                        text=briefing, 
+                        parse_mode="Markdown"
+                    )
+                except Exception as parse_err:
+                    logger.warning("Markdown parsing failed for user %s, falling back to plain text: %s", user_id, parse_err)
+                    await context.bot.send_message(
+                        chat_id=int(user_id), 
+                        text=briefing
+                    )
                 logger.info("Briefing sent successfully to user %s", user_id)
             except Exception as e:
                 logger.error("Failed to send briefing to user %s: %s", user_id, e)
