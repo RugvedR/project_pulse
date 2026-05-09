@@ -164,6 +164,20 @@ def check_login() -> bool:
     if st.session_state.get("authenticated"):
         return True
 
+    # --- Deep Linking (Auto-login) ---
+    # Check if user_id and token are provided in the URL
+    q_user_id = st.query_params.get("user_id", "")
+    q_token = st.query_params.get("token", "")
+
+    if q_user_id and q_token:
+        # Attempt auto-verification
+        if verify_otp(q_user_id.strip(), q_token.strip()):
+            st.session_state["authenticated"] = True
+            st.session_state["user_id"] = q_user_id.strip()
+            # Clear params so refresh doesn't fail (token is single-use)
+            st.query_params.clear()
+            st.rerun()
+
     st.title("🫀 Pulse Analytics")
     st.markdown("### Secure Login")
     st.info(
@@ -172,8 +186,8 @@ def check_login() -> bool:
     )
 
     with st.form("login_form"):
-        user_id_input = st.text_input("Your Telegram User ID", placeholder="e.g. 1485978523")
-        token_input = st.text_input("6-Digit Access Code", placeholder="e.g. 482910", max_chars=6)
+        user_id_input = st.text_input("Your Telegram User ID", value=q_user_id, placeholder="e.g. 1485978523")
+        token_input = st.text_input("6-Digit Access Code", value=q_token, placeholder="e.g. 482910", max_chars=6)
         submitted = st.form_submit_button("Login →")
 
     if submitted:
