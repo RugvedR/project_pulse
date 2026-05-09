@@ -44,7 +44,6 @@ class Settings(BaseSettings):
     )
 
     # ── Dashboard Security ────────────────────────────────────────────────
-    DASHBOARD_PASSWORD: str
 
     # ── LLM Provider ──────────────────────────────────────────────────────
     LLM_PROVIDER: str = "google"              # google | ollama
@@ -66,7 +65,7 @@ class Settings(BaseSettings):
     # ── Database ──────────────────────────────────────────────────────────
     DATABASE_URL_RAW: str = Field(default=f"sqlite+aiosqlite:///{_PROJECT_ROOT / 'data' / 'pulse.db'}", alias="DATABASE_URL")
     CHECKPOINT_DB_PATH: str = str(_PROJECT_ROOT / "data" / "checkpoints.db")
-    DASHBOARD_URL: str = "http://localhost:8501"
+    DASHBOARD_URL: str
 
     @property
     def DATABASE_URL(self) -> str:
