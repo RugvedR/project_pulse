@@ -32,12 +32,53 @@ st.set_page_config(
 
 st.markdown("""
     <style>
-    .main { background-color: #0e1117; }
+    /* Main container styling */
+    .main { 
+        background-color: #0e1117; 
+        padding-top: 1rem;
+    }
+    
+    /* Metrics container styling */
+    div[data-testid="stMetricValue"] {
+        font-size: 1.8rem !important;
+        font-weight: 700 !important;
+        color: #00d4ff !important;
+    }
+    
     .stMetric {
         background-color: #1e2130;
-        padding: 20px;
-        border-radius: 10px;
+        padding: 15px 20px;
+        border-radius: 12px;
         border: 1px solid #3e4259;
+        transition: transform 0.2s ease-in-out;
+    }
+    
+    .stMetric:hover {
+        transform: translateY(-5px);
+        border-color: #00d4ff;
+    }
+
+    /* Mobile adjustments */
+    @media (max-width: 640px) {
+        div[data-testid="stMetricValue"] {
+            font-size: 1.4rem !important;
+        }
+        .stMetric {
+            padding: 10px 15px;
+            margin-bottom: 10px;
+        }
+        h1 {
+            font-size: 1.8rem !important;
+        }
+    }
+
+    /* Login form styling */
+    .stForm {
+        border: none !important;
+        background-color: #1e2130;
+        padding: 2rem !important;
+        border-radius: 15px;
+        border: 1px solid #3e4259 !important;
     }
     </style>
     """, unsafe_allow_html=True)

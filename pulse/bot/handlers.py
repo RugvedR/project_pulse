@@ -163,7 +163,7 @@ async def dashboard_handler(update: Update, context: ContextTypes.DEFAULT_TYPE) 
         f"🆔 *Your ID:* `{user_id}`\n"
         f"🔑 *Access Code:* `{token}`\n\n"
         "⏳ _This code expires in 10 minutes and can only be used once._\n\n"
-        "🔗 [Open Dashboard](http://localhost:8501)"
+        f"🔗 [Open Dashboard]({settings.DASHBOARD_URL})"
     )
     await update.message.reply_text(msg, parse_mode="Markdown")
 
