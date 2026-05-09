@@ -48,6 +48,11 @@ engine: AsyncEngine = create_async_engine(
     settings.DATABASE_URL,
     echo=False,                   # Set True for SQL debugging
     future=True,
+    # Supabase/PgBouncer requirement: disable prepared statements
+    connect_args={
+        "statement_cache_size": 0,
+        "prepared_statement_cache_size": 0,
+    }
 )
 
 
