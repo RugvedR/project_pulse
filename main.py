@@ -13,6 +13,7 @@ import logging
 import sys
 
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+from telegram.request import HTTPXRequest
 import threading
 import http.server
 import socketserver
@@ -162,8 +163,15 @@ def main() -> None:
     logger.info("  Database:  %s", settings.DATABASE_URL)
     logger.info("  HITL Threshold: %s INR", settings.LARGE_EXPENSE_THRESHOLD)
 
-    # Build the Telegram application
-    app = ApplicationBuilder().token(settings.TELEGRAM_BOT_TOKEN).post_init(post_init).build()
+    # Build the Telegram application with a longer timeout for cloud stability
+    request = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
+    app = (
+        ApplicationBuilder()
+        .token(settings.TELEGRAM_BOT_TOKEN)
+        .post_init(post_init)
+        .request(request)
+        .build()
+    )
 
     # Register handlers (order matters — specific callbacks before catch-all)
     app.add_handler(CommandHandler("start", start_handler))
