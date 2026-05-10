@@ -163,8 +163,14 @@ def main() -> None:
     logger.info("  Database:  %s", settings.DATABASE_URL)
     logger.info("  HITL Threshold: %s INR", settings.LARGE_EXPENSE_THRESHOLD)
 
-    # Build the Telegram application with a longer timeout for cloud stability
-    request = HTTPXRequest(connect_timeout=30.0, read_timeout=30.0)
+    # Build the Telegram application with aggressive network resilience for cloud firewalls
+    request = HTTPXRequest(
+        connect_timeout=30.0, 
+        read_timeout=30.0, 
+        write_timeout=30.0, 
+        pool_timeout=30.0,
+        connection_pool_size=8 # Smaller pool forces fresh connections
+    )
     app = (
         ApplicationBuilder()
         .token(settings.TELEGRAM_BOT_TOKEN)
