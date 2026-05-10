@@ -1,10 +1,20 @@
+---
+title: Pulse Expense Bot
+emoji: 📊
+colorFrom: gray
+colorTo: yellow
+sdk: docker
+pinned: false
+short_description: AI Powered Expense tracker bot
+---
+
 # 🫀 Project Pulse — Agentic Expense Orchestrator
 
 > A future-proof, agentic financial companion that moves beyond passive tracking to active, context-aware financial reasoning.
 
 ## What Is Pulse?
 
-Pulse is an AI-powered financial management system built on **LangGraph**. It receives natural-language expense inputs via a **Telegram bot**, uses **Gemini Flash** to parse and reason about them, stores validated transactions in **SQLite**, and proactively coaches you with weekly financial briefings.
+Pulse is an AI-powered financial management system built on **LangGraph**. It receives natural-language expense inputs via a **Telegram bot**, uses **Gemini Flash** to parse and reason about them, stores validated transactions in **Supabase (PostgreSQL)**, and proactively coaches you with weekly financial briefings and a real-time analytics dashboard.
 
 ## Architecture
 
@@ -14,6 +24,8 @@ Telegram → Scribe (Parse) → Router (Decide) → Vault (Save to DB)
                           Investigator (Web Search)
                                   ↓
                             Coach (Weekly Briefing)
+                                  ↓
+                        Dashboard (Streamlit Analytics)
 ```
 
 ## Tech Stack
@@ -21,12 +33,12 @@ Telegram → Scribe (Parse) → Router (Decide) → Vault (Save to DB)
 | Layer           | Technology                          |
 |-----------------|-------------------------------------|
 | Orchestration   | LangGraph (stateful, cyclic graphs) |
-| Intelligence    | Gemini 2.0 Flash (Google AI Studio) |
+| Intelligence    | Gemini 3.1 Flash (Google AI Studio) |
 | Interface       | Telegram Bot API (`python-telegram-bot`) |
-| Validation      | Pydantic v2                         |
-| Database        | SQLAlchemy 2.0 + SQLite (async via `aiosqlite`) |
-| Protocol        | Model Context Protocol (FastMCP)     |
-| Environment     | Python 3.11.5                       |
+| Analytics       | Streamlit (Real-time Dashboard)      |
+| Database        | Supabase / PostgreSQL (SQLAlchemy 2.0) |
+| Deployment      | Docker + Hugging Face Spaces        |
+| Environment     | Python 3.11                         |
 
 ## Quick Start
 

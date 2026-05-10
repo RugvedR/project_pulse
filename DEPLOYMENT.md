@@ -27,20 +27,23 @@ This guide will help you move your Pulse Expense Orchestrator from your local ma
 
 ---
 
-## 🤖 Step 2: Deploy the Bot (Koyeb)
-Koyeb will run your `main.py` 24/7 as a background process.
+## 🤖 Step 2: Deploy the Bot (Hugging Face Spaces)
+Hugging Face gives you a massive 16GB RAM server for free that stays online 24/7.
 
-1. **Sign up**: Go to [Koyeb.com](https://www.koyeb.com/).
-2. **Create App**: Click **Create Service**.
-3. **Connect GitHub**: Choose your repository.
-4. **Instance Type**: Select the **Eco** (Free) tier.
-5. **Builder**: Choose **Docker**. Koyeb will see our `Dockerfile` and build it automatically.
-6. **Environment Variables**: Add the following:
-   - `TELEGRAM_BOT_TOKEN`
-   - `GEMINI_API_KEY`
-   - `DATABASE_URL` (Use your Supabase connection string)
-   - `DASHBOARD_URL` (You will update this *after* Step 3)
-7. **Deploy**: Click **Deploy**. Your bot is now live!
+1. **Sign up**: Go to [huggingface.co](https://huggingface.co/) and create an account.
+2. **Create Space**: Click **New** -> **Space**.
+3. **Settings**:
+   - **Space Name**: `pulse-bot`
+   - **SDK**: Select **Docker** (Blank).
+   - **Space Hardware**: CPU Basic (Free - 16GB RAM).
+   - **Public/Private**: Private (Recommended).
+4. **Upload Code**: 
+   - Connect your GitHub repo to the Space in the **Settings** tab.
+5. **Environment Variables**: 
+   - Go to the **Settings** tab of your Space.
+   - Find **Variables and secrets**.
+   - Add your secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `DATABASE_URL`, and `DASHBOARD_URL`.
+6. **Deploy**: The Space will build the `Dockerfile` and start your bot automatically!
 
 ---
 

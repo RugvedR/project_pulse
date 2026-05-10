@@ -13,6 +13,20 @@ import logging
 import sys
 
 from telegram.ext import ApplicationBuilder, CommandHandler, MessageHandler, CallbackQueryHandler, filters, ContextTypes
+import threading
+import http.server
+import socketserver
+
+def run_health_check():
+    """
+    Tiny web server to satisfy cloud hosting 'port' requirements.
+    This keeps the bot alive on providers like Hugging Face or Render.
+    """
+    port = 7860
+    handler = http.server.SimpleHTTPRequestHandler
+    with socketserver.TCPServer(("", port), handler) as httpd:
+        logger.info(f"Health check server running on port {port}")
+        httpd.serve_forever()
 
 from pulse.bot.handlers import (
     error_handler,
@@ -130,6 +144,9 @@ async def post_init(application: ApplicationBuilder) -> None:
 def main() -> None:
     """Build and run the Telegram bot application."""
     _setup_logging()
+    
+    # Start health check server in background (for cloud hosting uptime)
+    threading.Thread(target=run_health_check, daemon=True).start()
     
     # Validate required config
     if not settings.TELEGRAM_BOT_TOKEN:
