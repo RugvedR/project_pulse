@@ -1,13 +1,3 @@
----
-title: Pulse Expense Bot
-emoji: 📊
-colorFrom: gray
-colorTo: yellow
-sdk: docker
-pinned: false
-short_description: AI Powered Expense tracker bot
----
-
 # 🫀 Project Pulse — Agentic Expense Orchestrator
 
 > A future-proof, agentic financial companion that moves beyond passive tracking to active, context-aware financial reasoning.

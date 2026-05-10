@@ -27,23 +27,28 @@ This guide will help you move your Pulse Expense Orchestrator from your local ma
 
 ---
 
-## 🤖 Step 2: Deploy the Bot (Hugging Face Spaces)
-Hugging Face gives you a massive 16GB RAM server for free that stays online 24/7.
+## 🤖 Step 2: Deploy the Bot (Render.com)
+Render provides an incredibly stable free tier for Python Web Services.
 
-1. **Sign up**: Go to [huggingface.co](https://huggingface.co/) and create an account.
-2. **Create Space**: Click **New** -> **Space**.
-3. **Settings**:
-   - **Space Name**: `pulse-bot`
-   - **SDK**: Select **Docker** (Blank).
-   - **Space Hardware**: CPU Basic (Free - 16GB RAM).
-   - **Public/Private**: Private (Recommended).
-4. **Upload Code**: 
-   - Connect your GitHub repo to the Space in the **Settings** tab.
-5. **Environment Variables**: 
-   - Go to the **Settings** tab of your Space.
-   - Find **Variables and secrets**.
-   - Add your secrets: `TELEGRAM_BOT_TOKEN`, `GEMINI_API_KEY`, `DATABASE_URL`, and `DASHBOARD_URL`.
-6. **Deploy**: The Space will build the `Dockerfile` and start your bot automatically!
+1. **Sign up**: Go to [Render.com](https://render.com/).
+2. **Create App**: Click **New** -> **Web Service**.
+3. **Connect GitHub**: Choose your `pulse-orchestrator` repository.
+4. **Settings**:
+   - **Name**: `pulse-bot`
+   - **Region**: Choose one closest to you (e.g., Frankfurt/Oregon).
+   - **Branch**: `main`
+   - **Runtime**: `Docker`
+   - **Instance Type**: Free
+5. **Environment Variables**: Add your secrets: 
+   - `TELEGRAM_BOT_TOKEN`
+   - `GEMINI_API_KEY`
+   - `DATABASE_URL` (Use your Supabase connection string)
+   - `DASHBOARD_URL`
+6. **Deploy**: Click **Create Web Service**. Render will build the Docker container and start your bot.
+7. **The "Keep-Alive" Hack**: 
+   - Render's free tier sleeps after 15 minutes of inactivity.
+   - Go to [cron-job.org](https://cron-job.org/) (free).
+   - Create a cron job that pings your Render URL (e.g., `https://pulse-bot.onrender.com`) every 14 minutes. This guarantees your bot stays awake 24/7!
 
 ---
 
