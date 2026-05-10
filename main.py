@@ -17,13 +17,14 @@ from telegram.request import HTTPXRequest
 import threading
 import http.server
 import socketserver
+import os
 
 def run_health_check():
     """
     Tiny web server to satisfy cloud hosting 'port' requirements.
-    This keeps the bot alive on providers like Hugging Face or Render.
+    This keeps the bot alive on providers like Render.
     """
-    port = 7860
+    port = int(os.environ.get("PORT", 10000))
     handler = http.server.SimpleHTTPRequestHandler
     with socketserver.TCPServer(("", port), handler) as httpd:
         logger.info(f"Health check server running on port {port}")
